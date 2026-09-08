@@ -1,5 +1,5 @@
 import { Redirect, useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -20,13 +20,16 @@ export default function PairScreen() {
   // 届くことがあるため、React stateではなくrefで同期的に「発行中/発行済み」を管理する
   const justPairedRef = useRef(false);
 
+  // 自分で招待コードを発行した直後はこの画面のまま表示を続けたいので、
+  // 発行フロー中でない場合のみ自動でタスク一覧へ遷移する（refはeffect内でのみ参照する）
+  useEffect(() => {
+    if (profile?.coupleId && !justPairedRef.current) {
+      router.replace('/');
+    }
+  }, [profile?.coupleId, router]);
+
   if (!initializing && !user) {
     return <Redirect href="/login" />;
-  }
-  // 自分で招待コードを発行した直後はこの画面のまま表示を続けたいので、
-  // 発行フロー中でない場合のみ自動でタスク一覧へ遷移する
-  if (profile?.coupleId && !justPairedRef.current) {
-    return <Redirect href="/" />;
   }
 
   async function handleCreate() {

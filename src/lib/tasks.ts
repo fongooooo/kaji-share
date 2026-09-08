@@ -1,6 +1,7 @@
 import {
   addDoc,
   collection,
+  deleteField,
   doc,
   getDoc,
   onSnapshot,
@@ -12,46 +13,42 @@ import {
 } from 'firebase/firestore';
 
 import { db } from '@/lib/firebase';
-import type { Task, TaskFrequency } from '@/types/models';
+import type { Task, TaskCompletion, TaskFrequency } from '@/types/models';
 
 function tasksCollection(coupleId: string) {
   return collection(db, 'couples', coupleId, 'tasks');
 }
 
+function toTask(id: string, data: Record<string, unknown>): Task {
+  const rawCompletions = (data.completions as Record<string, { completedBy: string; completedAt: Timestamp }>) ?? {};
+  const completions: Record<string, TaskCompletion> = {};
+  for (const [period, completion] of Object.entries(rawCompletions)) {
+    completions[period] = {
+      completedBy: completion.completedBy,
+      completedAt: completion.completedAt?.toMillis() ?? 0,
+    };
+  }
+  return {
+    id,
+    title: data.title as string,
+    assigneeUid: (data.assigneeUid as string | null) ?? null,
+    frequency: data.frequency as TaskFrequency,
+    completions,
+    updatedAt: (data.updatedAt as Timestamp | undefined)?.toMillis() ?? 0,
+  };
+}
+
 export function subscribeTasks(coupleId: string, onChange: (tasks: Task[]) => void) {
   const q = query(tasksCollection(coupleId), orderBy('updatedAt', 'desc'));
   return onSnapshot(q, (snapshot) => {
-    const tasks = snapshot.docs.map((docSnapshot) => {
-      const data = docSnapshot.data();
-      return {
-        id: docSnapshot.id,
-        title: data.title,
-        assigneeUid: data.assigneeUid ?? null,
-        frequency: data.frequency,
-        status: data.status,
-        completedBy: data.completedBy ?? null,
-        completedAt: (data.completedAt as Timestamp | null)?.toMillis() ?? null,
-        updatedAt: (data.updatedAt as Timestamp | undefined)?.toMillis() ?? 0,
-      } satisfies Task;
-    });
-    onChange(tasks);
+    onChange(snapshot.docs.map((docSnapshot) => toTask(docSnapshot.id, docSnapshot.data())));
   });
 }
 
 export async function getTask(coupleId: string, taskId: string): Promise<Task | null> {
   const snapshot = await getDoc(doc(db, 'couples', coupleId, 'tasks', taskId));
   if (!snapshot.exists()) return null;
-  const data = snapshot.data();
-  return {
-    id: snapshot.id,
-    title: data.title,
-    assigneeUid: data.assigneeUid ?? null,
-    frequency: data.frequency,
-    status: data.status,
-    completedBy: data.completedBy ?? null,
-    completedAt: (data.completedAt as Timestamp | null)?.toMillis() ?? null,
-    updatedAt: (data.updatedAt as Timestamp | undefined)?.toMillis() ?? 0,
-  };
+  return toTask(snapshot.id, snapshot.data());
 }
 
 export async function createTask(
@@ -62,9 +59,7 @@ export async function createTask(
     title: input.title,
     assigneeUid: input.assigneeUid,
     frequency: input.frequency,
-    status: 'pending',
-    completedBy: null,
-    completedAt: null,
+    completions: {},
     updatedAt: serverTimestamp(),
   });
 }
@@ -82,11 +77,15 @@ export async function updateTask(
   });
 }
 
-export async function setTaskStatus(coupleId: string, taskId: string, uid: string, done: boolean) {
+export async function setTaskPeriodCompletion(
+  coupleId: string,
+  taskId: string,
+  periodKey: string,
+  uid: string,
+  done: boolean,
+) {
   await updateDoc(doc(db, 'couples', coupleId, 'tasks', taskId), {
-    status: done ? 'done' : 'pending',
-    completedBy: done ? uid : null,
-    completedAt: done ? serverTimestamp() : null,
+    [`completions.${periodKey}`]: done ? { completedBy: uid, completedAt: serverTimestamp() } : deleteField(),
     updatedAt: serverTimestamp(),
   });
 }

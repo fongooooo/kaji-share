@@ -6,14 +6,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { setTaskStatus, subscribeTasks } from '@/lib/tasks';
+import { getCurrentPeriodKey, getCurrentPeriodLabel } from '@/lib/period';
+import { setTaskPeriodCompletion, subscribeTasks } from '@/lib/tasks';
 import { useAuth } from '@/state/auth-context';
 import type { Task, TaskFrequency } from '@/types/models';
+
+type FrequencyTab = TaskFrequency | 'all';
 
 export default function TaskListScreen() {
   const { user, profile, initializing, signOut } = useAuth();
   const router = useRouter();
-  const [frequency, setFrequency] = useState<TaskFrequency>('weekly');
+  const [frequencyTab, setFrequencyTab] = useState<FrequencyTab>('all');
+  const [onlyMine, setOnlyMine] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
 
   const coupleId = profile?.coupleId ?? null;
@@ -37,16 +41,25 @@ export default function TaskListScreen() {
     );
   }
 
-  const visibleTasks = tasks.filter((task) => task.frequency === frequency);
+  const isDone = (task: Task) => getCurrentPeriodKey(task.frequency) in task.completions;
+
+  const visibleTasks = tasks
+    .filter((task) => frequencyTab === 'all' || task.frequency === frequencyTab)
+    .filter((task) => !onlyMine || task.assigneeUid === user?.uid)
+    .sort((a, b) => (isDone(a) === isDone(b) ? 0 : isDone(a) ? 1 : -1));
 
   function assigneeLabel(task: Task) {
     if (task.assigneeUid === null) return 'どちらでも';
     return task.assigneeUid === user?.uid ? '自分' : 'パートナー';
   }
 
+  function frequencyLabel(task: Task) {
+    return task.frequency === 'weekly' ? '毎週' : '毎月';
+  }
+
   async function handleToggle(task: Task) {
     if (!coupleId || !user) return;
-    await setTaskStatus(coupleId, task.id, user.uid, task.status !== 'done');
+    await setTaskPeriodCompletion(coupleId, task.id, getCurrentPeriodKey(task.frequency), user.uid, !isDone(task));
   }
 
   return (
@@ -62,14 +75,29 @@ export default function TaskListScreen() {
         </ThemedView>
 
         <ThemedView style={styles.tabs}>
-          {(['weekly', 'monthly'] as const).map((value) => (
+          {(['weekly', 'monthly', 'all'] as const).map((value) => (
             <Pressable
               key={value}
-              onPress={() => setFrequency(value)}
-              style={[styles.tab, frequency === value && styles.tabActive]}>
-              <ThemedText type="smallBold">{value === 'weekly' ? '今週' : '今月'}</ThemedText>
+              onPress={() => setFrequencyTab(value)}
+              style={[styles.tab, frequencyTab === value && styles.tabActive]}>
+              <ThemedText type="smallBold">
+                {value === 'weekly' ? '今週' : value === 'monthly' ? '今月' : 'すべて'}
+              </ThemedText>
             </Pressable>
           ))}
+        </ThemedView>
+
+        <ThemedView style={styles.subRow}>
+          {frequencyTab !== 'all' && (
+            <ThemedText type="small" themeColor="textSecondary">
+              {getCurrentPeriodLabel(frequencyTab)}
+            </ThemedText>
+          )}
+          <Pressable style={styles.onlyMineToggle} onPress={() => setOnlyMine((v) => !v)}>
+            <ThemedText type="small" themeColor={onlyMine ? undefined : 'textSecondary'}>
+              {onlyMine ? '☑' : '☐'} 自分のタスクのみ
+            </ThemedText>
+          </Pressable>
         </ThemedView>
 
         <FlatList
@@ -85,17 +113,16 @@ export default function TaskListScreen() {
           renderItem={({ item }) => (
             <ThemedView type="backgroundElement" style={styles.taskRow}>
               <Pressable style={styles.checkbox} onPress={() => handleToggle(item)}>
-                <ThemedText>{item.status === 'done' ? '✅' : '⬜️'}</ThemedText>
+                <ThemedText>{isDone(item) ? '✅' : '⬜️'}</ThemedText>
               </Pressable>
               <Link href={{ pathname: '/task-edit', params: { id: item.id } }} asChild>
                 <Pressable style={styles.taskInfo}>
-                  <ThemedText
-                    type="default"
-                    style={item.status === 'done' ? styles.taskDone : undefined}>
+                  <ThemedText type="default" style={isDone(item) ? styles.taskDone : undefined}>
                     {item.title}
                   </ThemedText>
                   <ThemedText type="small" themeColor="textSecondary">
                     担当: {assigneeLabel(item)}
+                    {frequencyTab === 'all' ? ` ・ ${frequencyLabel(item)}` : ''}
                   </ThemedText>
                 </Pressable>
               </Link>
@@ -152,6 +179,15 @@ const styles = StyleSheet.create({
   },
   tabActive: {
     backgroundColor: '#3c87f7',
+  },
+  subRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.two,
+  },
+  onlyMineToggle: {
+    marginLeft: 'auto',
   },
   list: {
     flex: 1,

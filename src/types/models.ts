@@ -1,14 +1,17 @@
 export type TaskFrequency = 'weekly' | 'monthly';
-export type TaskStatus = 'pending' | 'done';
+
+export type TaskCompletion = {
+  completedBy: string;
+  completedAt: number;
+};
 
 export type Task = {
   id: string;
   title: string;
   assigneeUid: string | null;
   frequency: TaskFrequency;
-  status: TaskStatus;
-  completedBy: string | null;
-  completedAt: number | null;
+  // キー: 週次なら"2026-W37"、月次なら"2026-09"のような期間キー
+  completions: Record<string, TaskCompletion>;
   updatedAt: number;
 };
 
