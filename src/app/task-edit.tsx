@@ -6,8 +6,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { confirmAsync } from '@/lib/confirm';
 import { subscribeCoupleMemberUids } from '@/lib/couples';
-import { createTask, getTask, updateTask } from '@/lib/tasks';
+import { createTask, deleteTask, getTask, updateTask } from '@/lib/tasks';
 import { useAuth } from '@/state/auth-context';
 import type { TaskFrequency } from '@/types/models';
 
@@ -66,6 +67,21 @@ export default function TaskEditScreen() {
     } catch (e) {
       setError(e instanceof Error ? e.message : '保存に失敗しました');
     } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!coupleId || !id) return;
+    const confirmed = await confirmAsync('タスクを削除しますか？', `「${title}」を削除すると元に戻せません。`);
+    if (!confirmed) return;
+
+    setSubmitting(true);
+    try {
+      await deleteTask(coupleId, id);
+      router.back();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '削除に失敗しました');
       setSubmitting(false);
     }
   }
@@ -141,6 +157,14 @@ export default function TaskEditScreen() {
             {submitting ? '保存中...' : '保存する'}
           </ThemedText>
         </Pressable>
+
+        {id && (
+          <Pressable style={styles.deleteButton} onPress={handleDelete} disabled={submitting}>
+            <ThemedText type="smallBold" style={styles.deleteButtonText}>
+              このタスクを削除する
+            </ThemedText>
+          </Pressable>
+        )}
       </SafeAreaView>
     </ThemedView>
   );
@@ -200,5 +224,13 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.three,
     alignItems: 'center',
     marginTop: Spacing.four,
+  },
+  deleteButton: {
+    alignItems: 'center',
+    paddingVertical: Spacing.three,
+    marginTop: Spacing.two,
+  },
+  deleteButtonText: {
+    color: '#d33',
   },
 });

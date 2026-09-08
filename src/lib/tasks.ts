@@ -1,6 +1,7 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
   deleteField,
   doc,
   getDoc,
@@ -75,6 +76,10 @@ export async function updateTask(
     frequency: input.frequency,
     updatedAt: serverTimestamp(),
   });
+}
+
+export async function deleteTask(coupleId: string, taskId: string) {
+  await deleteDoc(doc(db, 'couples', coupleId, 'tasks', taskId));
 }
 
 export async function setTaskPeriodCompletion(
