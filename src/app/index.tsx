@@ -1,98 +1,189 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
+import { Link, Redirect, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { FlatList, Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { setTaskStatus, subscribeTasks } from '@/lib/tasks';
+import { useAuth } from '@/state/auth-context';
+import type { Task, TaskFrequency } from '@/types/models';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
+export default function TaskListScreen() {
+  const { user, profile, initializing, signOut } = useAuth();
+  const router = useRouter();
+  const [frequency, setFrequency] = useState<TaskFrequency>('weekly');
+  const [tasks, setTasks] = useState<Task[]>([]);
+
+  const coupleId = profile?.coupleId ?? null;
+
+  useEffect(() => {
+    if (!coupleId) return;
+    return subscribeTasks(coupleId, setTasks);
+  }, [coupleId]);
+
+  if (!initializing && !user) {
+    return <Redirect href="/login" />;
   }
-  if (Device.isDevice) {
+  if (user && profile && !profile.coupleId) {
+    return <Redirect href="/pair" />;
+  }
+  if (initializing || !profile) {
     return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
+      <ThemedView style={styles.center}>
+        <ThemedText themeColor="textSecondary">読み込み中...</ThemedText>
+      </ThemedView>
     );
   }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
 
-export default function HomeScreen() {
+  const visibleTasks = tasks.filter((task) => task.frequency === frequency);
+
+  function assigneeLabel(task: Task) {
+    if (task.assigneeUid === null) return 'どちらでも';
+    return task.assigneeUid === user?.uid ? '自分' : 'パートナー';
+  }
+
+  async function handleToggle(task: Task) {
+    if (!coupleId || !user) return;
+    await setTaskStatus(coupleId, task.id, user.uid, task.status !== 'done');
+  }
+
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
+        <ThemedView style={styles.header}>
           <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
+            家事タスク
           </ThemedText>
+          <Pressable onPress={() => router.push('/task-edit')}>
+            <ThemedText type="linkPrimary">＋ 追加</ThemedText>
+          </Pressable>
         </ThemedView>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
+        <ThemedView style={styles.tabs}>
+          {(['weekly', 'monthly'] as const).map((value) => (
+            <Pressable
+              key={value}
+              onPress={() => setFrequency(value)}
+              style={[styles.tab, frequency === value && styles.tabActive]}>
+              <ThemedText type="smallBold">{value === 'weekly' ? '今週' : '今月'}</ThemedText>
+            </Pressable>
+          ))}
         </ThemedView>
 
-        {Platform.OS === 'web' && <WebBadge />}
+        <FlatList
+          data={visibleTasks}
+          keyExtractor={(task) => task.id}
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <ThemedText themeColor="textSecondary" style={styles.emptyText}>
+              まだタスクがありません。右上の「＋ 追加」から登録しましょう。
+            </ThemedText>
+          }
+          renderItem={({ item }) => (
+            <ThemedView type="backgroundElement" style={styles.taskRow}>
+              <Pressable style={styles.checkbox} onPress={() => handleToggle(item)}>
+                <ThemedText>{item.status === 'done' ? '✅' : '⬜️'}</ThemedText>
+              </Pressable>
+              <Link href={{ pathname: '/task-edit', params: { id: item.id } }} asChild>
+                <Pressable style={styles.taskInfo}>
+                  <ThemedText
+                    type="default"
+                    style={item.status === 'done' ? styles.taskDone : undefined}>
+                    {item.title}
+                  </ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    担当: {assigneeLabel(item)}
+                  </ThemedText>
+                </Pressable>
+              </Link>
+            </ThemedView>
+          )}
+        />
+
+        <Pressable onPress={() => signOut()}>
+          <ThemedText type="small" themeColor="textSecondary" style={styles.signOut}>
+            ログアウト
+          </ThemedText>
+        </Pressable>
       </SafeAreaView>
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   container: {
     flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
+    alignItems: 'center',
   },
   safeArea: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
+    width: '100%',
     maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
     paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
+    paddingTop: Spacing.three,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.three,
   },
   title: {
+    fontSize: 28,
+  },
+  tabs: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+    marginBottom: Spacing.three,
+  },
+  tab: {
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.four,
+    borderRadius: Spacing.five,
+    backgroundColor: '#8882',
+  },
+  tabActive: {
+    backgroundColor: '#3c87f7',
+  },
+  list: {
+    flex: 1,
+  },
+  listContent: {
+    gap: Spacing.two,
+    paddingBottom: Spacing.four,
+  },
+  emptyText: {
     textAlign: 'center',
+    marginTop: Spacing.five,
   },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
+  taskRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: Spacing.three,
+    padding: Spacing.three,
     gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+  },
+  checkbox: {
+    padding: Spacing.one,
+  },
+  taskInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  taskDone: {
+    textDecorationLine: 'line-through',
+    opacity: 0.5,
+  },
+  signOut: {
+    textAlign: 'center',
+    paddingVertical: Spacing.three,
   },
 });

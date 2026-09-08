@@ -8,6 +8,7 @@ export function useColorScheme() {
   const [hasHydrated, setHasHydrated] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR/CSRの差異を吸収するため、クライアントでのマウント検知にのみ使用
     setHasHydrated(true);
   }, []);
 
