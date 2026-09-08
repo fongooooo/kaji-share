@@ -188,9 +188,10 @@
       "bases:新規ベースを作成": false
     }
   },
-  "active": "effa17c7b886866b",
+  "active": "b6a2d1cf170033fb",
   "lastOpenFiles": [
     "tech-stack.md",
+    "design.md",
     "source-structure.md"
   ]
 }
