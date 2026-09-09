@@ -1,3 +1,4 @@
+import * as Clipboard from 'expo-clipboard';
 import { Redirect, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, TextInput } from 'react-native';
@@ -16,6 +17,7 @@ export default function PairScreen() {
   const [createdCode, setCreatedCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [copied, setCopied] = useState(false);
   // createCoupleのFirestore書き込み後、profile.coupleIdの購読更新がsetCreatedCodeより先に
   // 届くことがあるため、React stateではなくrefで同期的に「発行中/発行済み」を管理する
   const justPairedRef = useRef(false);
@@ -48,6 +50,17 @@ export default function PairScreen() {
     }
   }
 
+  async function handleCopy() {
+    if (!createdCode) return;
+    try {
+      await Clipboard.setStringAsync(createdCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setError('コピーに失敗しました。コードを手入力で伝えてください。');
+    }
+  }
+
   async function handleJoin() {
     if (!user) return;
     setError(null);
@@ -74,6 +87,14 @@ export default function PairScreen() {
               {createdCode}
             </ThemedText>
           </ThemedView>
+          <Pressable style={styles.submitButtonSecondary} onPress={handleCopy}>
+            <ThemedText type="smallBold">{copied ? 'コピーしました' : 'コピーする'}</ThemedText>
+          </Pressable>
+          {error && (
+            <ThemedText type="small" style={styles.error}>
+              {error}
+            </ThemedText>
+          )}
           <Pressable style={styles.submitButton} onPress={() => router.replace('/')}>
             <ThemedText type="smallBold" themeColor="background">
               タスク一覧へ進む
@@ -175,6 +196,7 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.two,
     paddingVertical: Spacing.three,
     alignItems: 'center',
+    alignSelf: 'stretch',
   },
   orText: {
     marginVertical: Spacing.one,
