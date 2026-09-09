@@ -31,6 +31,11 @@ function getMondayOfWeek(date: Date): Date {
   return d;
 }
 
+export function formatCompletedDate(ms: number): string {
+  const d = new Date(ms);
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
 export function getCurrentPeriodLabel(frequency: TaskFrequency, now: Date = new Date()): string {
   if (frequency === 'monthly') {
     return `${now.getFullYear()}年${now.getMonth() + 1}月`;

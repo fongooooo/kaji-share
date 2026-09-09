@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { getCurrentPeriodKey, getCurrentPeriodLabel } from '@/lib/period';
+import { formatCompletedDate, getCurrentPeriodKey, getCurrentPeriodLabel } from '@/lib/period';
 import { setTaskPeriodCompletion, subscribeTasks } from '@/lib/tasks';
 import { useAuth } from '@/state/auth-context';
 import type { Task, TaskFrequency } from '@/types/models';
@@ -41,7 +41,8 @@ export default function TaskListScreen() {
     );
   }
 
-  const isDone = (task: Task) => getCurrentPeriodKey(task.frequency) in task.completions;
+  const getCompletion = (task: Task) => task.completions[getCurrentPeriodKey(task.frequency)];
+  const isDone = (task: Task) => getCompletion(task) !== undefined;
 
   const visibleTasks = tasks
     .filter((task) => frequencyTab === 'all' || task.frequency === frequencyTab)
@@ -123,6 +124,7 @@ export default function TaskListScreen() {
                   <ThemedText type="small" themeColor="textSecondary">
                     担当: {assigneeLabel(item)}
                     {frequencyTab === 'all' ? ` ・ ${frequencyLabel(item)}` : ''}
+                    {isDone(item) ? ` ・ ${formatCompletedDate(getCompletion(item)!.completedAt)}に完了` : ''}
                   </ThemedText>
                 </Pressable>
               </Link>
