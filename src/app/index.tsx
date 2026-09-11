@@ -6,8 +6,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { confirmAsync } from '@/lib/confirm';
 import { formatCompletedDate, getCurrentPeriodKey, getCurrentPeriodLabel } from '@/lib/period';
-import { setTaskPeriodCompletion, subscribeTasks } from '@/lib/tasks';
+import { deleteTask, setTaskPeriodCompletion, subscribeTasks } from '@/lib/tasks';
 import { useAuth } from '@/state/auth-context';
 import type { Task, TaskFrequency } from '@/types/models';
 
@@ -61,6 +62,16 @@ export default function TaskListScreen() {
   async function handleToggle(task: Task) {
     if (!coupleId || !user) return;
     await setTaskPeriodCompletion(coupleId, task.id, getCurrentPeriodKey(task.frequency), user.uid, !isDone(task));
+  }
+
+  async function handleDelete(task: Task) {
+    if (!coupleId) return;
+    const message = isDone(task)
+      ? `「${task.title}」は実施済みですが、削除してよいですか？`
+      : `「${task.title}」を削除すると元に戻せません。`;
+    const confirmed = await confirmAsync('タスクを削除しますか？', message);
+    if (!confirmed) return;
+    await deleteTask(coupleId, task.id);
   }
 
   return (
@@ -128,6 +139,9 @@ export default function TaskListScreen() {
                   </ThemedText>
                 </Pressable>
               </Link>
+              <Pressable style={styles.deleteButton} onPress={() => handleDelete(item)}>
+                <ThemedText themeColor="textSecondary">🗑</ThemedText>
+              </Pressable>
             </ThemedView>
           )}
         />
@@ -210,6 +224,9 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
   },
   checkbox: {
+    padding: Spacing.one,
+  },
+  deleteButton: {
     padding: Spacing.one,
   },
   taskInfo: {

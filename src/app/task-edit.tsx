@@ -8,6 +8,7 @@ import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { confirmAsync } from '@/lib/confirm';
 import { subscribeCoupleMemberUids } from '@/lib/couples';
+import { getCurrentPeriodKey } from '@/lib/period';
 import { createTask, deleteTask, getTask, updateTask } from '@/lib/tasks';
 import { useAuth } from '@/state/auth-context';
 import type { TaskFrequency } from '@/types/models';
@@ -26,6 +27,7 @@ export default function TaskEditScreen() {
   const [loading, setLoading] = useState(!!id);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [isTaskDone, setIsTaskDone] = useState(false);
 
   const coupleId = profile?.coupleId ?? null;
 
@@ -44,6 +46,7 @@ export default function TaskEditScreen() {
       setFrequency(task.frequency);
       if (task.assigneeUid === null) setAssignee('either');
       else setAssignee(task.assigneeUid === user.uid ? 'me' : 'partner');
+      setIsTaskDone(getCurrentPeriodKey(task.frequency) in task.completions);
       setLoading(false);
     });
   }, [id, coupleId, user]);
@@ -73,7 +76,10 @@ export default function TaskEditScreen() {
 
   async function handleDelete() {
     if (!coupleId || !id) return;
-    const confirmed = await confirmAsync('タスクを削除しますか？', `「${title}」を削除すると元に戻せません。`);
+    const message = isTaskDone
+      ? `「${title}」は実施済みですが、削除してよいですか？`
+      : `「${title}」を削除すると元に戻せません。`;
+    const confirmed = await confirmAsync('タスクを削除しますか？', message);
     if (!confirmed) return;
 
     setSubmitting(true);
