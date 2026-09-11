@@ -9,7 +9,8 @@ src/
 │   ├── index.tsx           # タスク一覧画面（ホーム）
 │   ├── login.tsx           # ログイン・新規登録画面
 │   ├── pair.tsx            # ペア設定画面
-│   └── task-edit.tsx       # タスク登録・編集画面（モーダル）
+│   ├── task-edit.tsx       # タスク登録・編集画面（モーダル）
+│   └── history.tsx         # 履歴画面（実施状況／月別タブ）
 ├── components/             # 共通UIコンポーネント
 │   ├── themed-text.tsx     # テーマ対応テキスト
 │   └── themed-view.tsx     # テーマ対応ビュー
@@ -19,10 +20,12 @@ src/
 │   ├── use-color-scheme.ts     # カラースキーム取得（ネイティブ）
 │   ├── use-color-scheme.web.ts # カラースキーム取得（Web 用の別実装）
 │   └── use-theme.ts            # 現在のテーマオブジェクトを返す
-├── lib/                    # Firebase アクセス層（ビジネスロジック）
+├── lib/                    # Firebase アクセス層・共通ロジック
 │   ├── firebase.ts         # Firebase 初期化・auth / db インスタンスのエクスポート
 │   ├── couples.ts          # ペア（couples コレクション）の読み書き
-│   └── tasks.ts            # タスク（tasks サブコレクション）の読み書き
+│   ├── tasks.ts            # タスク（tasks サブコレクション）の読み書き
+│   ├── period.ts           # 期間キー（ISO週/年月）の計算、表示ラベル・日付フォーマット
+│   └── confirm.ts          # Web/ネイティブ共通の確認ダイアログ（window.confirm / Alert.alert の使い分け）
 ├── state/                  # グローバル状態管理
 │   └── auth-context.tsx    # 認証状態・ユーザープロフィールの Context
 ├── types/                  # 型定義
@@ -42,7 +45,8 @@ src/
 | `index.tsx` | タスク一覧画面（ホーム）。週/月タブで切り替え、チェックで完了操作を行う。未ログイン→`/login`、未ペア→`/pair` へリダイレクト |
 | `login.tsx` | ログイン・新規登録画面。`signIn` / `signUp` を切り替えて Firebase Auth に送信する |
 | `pair.tsx` | ペア設定画面。招待コードの発行（`createCouple`）または入力（`joinCoupleByInviteCode`）でパートナーと紐付ける |
-| `task-edit.tsx` | タスク登録・編集画面（モーダル表示）。URL パラメータ `id` の有無で新規/編集を切り替える |
+| `task-edit.tsx` | タスク登録・編集画面（モーダル表示）。URL パラメータ `id` の有無で新規/編集を切り替える。保留の切り替え・削除もここから行う |
+| `history.tsx` | 履歴画面。「実施状況」タブ（各タスクの最終実施日、未実施は明記）と「月別」タブ（月を選んで実施状況を確認。週次タスクはタップで実施日一覧を展開）を切り替える |
 
 ### components/ — 共通UIコンポーネント
 
@@ -65,13 +69,15 @@ src/
 | `use-color-scheme.web.ts` | Web 向けの別実装（メディアクエリを使った実装） |
 | `use-theme.ts` | `useColorScheme` を使って `Colors.light` or `Colors.dark` のどちらかを返す |
 
-### lib/ — Firebase アクセス層
+### lib/ — Firebase アクセス層・共通ロジック
 
 | ファイル | 役割 |
 |---|---|
 | `firebase.ts` | Firebase アプリを初期化し、`auth`・`db` インスタンスをエクスポートする。ネイティブは `AsyncStorage` でセッション永続化、Web はブラウザの `localStorage` を使う |
 | `couples.ts` | `createCouple`（ペア作成・招待コード発行）、`joinCoupleByInviteCode`（招待コードでペア参加）、`subscribeCoupleMemberUids`（メンバーUID のリアルタイム購読）を提供する |
-| `tasks.ts` | `subscribeTasks`（タスク一覧のリアルタイム購読）、`getTask`（単件取得）、`createTask`・`updateTask`（登録/更新）、`setTaskStatus`（完了/未完了の切り替え）を提供する |
+| `tasks.ts` | `subscribeTasks`（タスク一覧のリアルタイム購読）、`getTask`（単件取得）、`createTask`・`updateTask`・`deleteTask`（登録/更新/削除）、`setTaskPeriodCompletion`（現在の期間の完了/未完了を切り替え）、`setTaskPaused`（保留のオン/オフ）を提供する |
+| `period.ts` | `getCurrentPeriodKey`（週次はISO週番号、月次は年月のキーを算出）、`getCurrentPeriodLabel`（表示用ラベル）、`getMonthRange`（月の開始/終了タイムスタンプ）、`formatCompletedDate`（完了日の表示フォーマット）を提供する |
+| `confirm.ts` | `confirmAsync`。react-native-web が `Alert.alert` の複数ボタン確認に対応していないため、Web は `window.confirm`、ネイティブは `Alert.alert` を使い分ける |
 
 ### state/ — グローバル状態管理
 
@@ -83,7 +89,7 @@ src/
 
 | ファイル | 役割 |
 |---|---|
-| `models.ts` | Firestore ドキュメントに対応する型（`Task`・`UserProfile`）と列挙型（`TaskFrequency`・`TaskStatus`）を定義する |
+| `models.ts` | Firestore ドキュメントに対応する型（`Task`・`TaskCompletion`・`UserProfile`）と列挙型（`TaskFrequency`）を定義する。タスクの完了状態は `Task.completions`（期間キーごとの完了記録）で持ち、固定の状態列挙型は無い |
 
 ---
 

@@ -29,6 +29,7 @@
 | `expo-font` | ~57.0.3 | カスタムフォントの読み込み |
 | `expo-linking` | ~57.0.9 | ディープリンク処理 |
 | `expo-web-browser` | ~57.0.2 | インアプリブラウザ |
+| `expo-clipboard` | ~57.0.1 | クリップボードへのコピー（招待コードのコピー機能） |
 
 ### UI補助
 
@@ -72,6 +73,7 @@
 | ----------------------------- | ---------------------------- |
 | Firebase Authentication       | メールアドレス＋パスワード認証              |
 | Cloud Firestore               | ユーザー・ペア・タスクデータの保存とリアルタイム購読   |
+| Firebase Hosting              | Web版（iPhone向け）の配信            |
 | Firebase Cloud Messaging（FCM） | タスク完了時の相手へのプッシュ通知（次フェーズ実装予定） |
 
 ---
@@ -88,6 +90,14 @@ EAS（Expo Application Services）を使用してビルド・配布を管理す�
 
 - EAS CLI バージョン要件: `>= 13.0.0`
 - アプリバージョン管理: `remote`（EAS 側で管理）
+- `eas-cli`・`firebase-tools` はプロジェクトの依存パッケージには含めず、`npx eas-cli`・`npx firebase-tools` の形でその都度実行する
+
+### Web配布（Firebase Hosting）
+
+iPhone側はネイティブアプリを配布せず、Web版をFirebase Hostingで配信する。
+
+1. `npx expo export --platform web` で `dist/` に静的ファイルを出力
+2. `npx firebase-tools deploy --only hosting` でデプロイ（設定は `firebase.json` / `.firebaserc`）
 
 ---
 
