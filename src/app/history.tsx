@@ -112,9 +112,14 @@ export default function HistoryScreen() {
             renderItem={({ item: task }) => {
               const last = lastCompletedAt(task);
               return (
-                <ThemedView type="backgroundElement" style={styles.taskRow}>
+                <ThemedView
+                  type="backgroundElement"
+                  style={[styles.taskRow, task.isPaused && styles.taskRowPaused]}>
                   <ThemedView style={styles.taskInfo}>
-                    <ThemedText type="default">{task.title}</ThemedText>
+                    <ThemedText type="default">
+                      {task.title}
+                      {task.isPaused ? '（保留中）' : ''}
+                    </ThemedText>
                     <ThemedText type="small" themeColor="textSecondary">
                       {last !== null ? `最終実施日: ${formatCompletedDate(last)}` : '未実施'}
                     </ThemedText>
@@ -138,10 +143,15 @@ export default function HistoryScreen() {
               if (task.frequency === 'monthly') {
                 const completion = task.completions[getCurrentPeriodKey('monthly', monthDate)] ?? null;
                 return (
-                  <ThemedView type="backgroundElement" style={styles.taskRow}>
+                  <ThemedView
+                    type="backgroundElement"
+                    style={[styles.taskRow, task.isPaused && styles.taskRowPaused]}>
                     <ThemedText>{completion ? '✅' : '⬜️'}</ThemedText>
                     <ThemedView style={styles.taskInfo}>
-                      <ThemedText type="default">{task.title}</ThemedText>
+                      <ThemedText type="default">
+                        {task.title}
+                        {task.isPaused ? '（保留中）' : ''}
+                      </ThemedText>
                       <ThemedText type="small" themeColor="textSecondary">
                         {completion ? `${formatCompletedDate(completion.completedAt)}に完了` : '未実施'}
                       </ThemedText>
@@ -157,8 +167,13 @@ export default function HistoryScreen() {
                 <Pressable
                   style={styles.taskRowColumn}
                   onPress={() => count > 0 && setExpandedTaskId(expanded ? null : task.id)}>
-                  <ThemedView type="backgroundElement" style={styles.weeklyHeaderRow}>
-                    <ThemedText type="default">{task.title}</ThemedText>
+                  <ThemedView
+                    type="backgroundElement"
+                    style={[styles.weeklyHeaderRow, task.isPaused && styles.taskRowPaused]}>
+                    <ThemedText type="default">
+                      {task.title}
+                      {task.isPaused ? '（保留中）' : ''}
+                    </ThemedText>
                     <ThemedText type="small" themeColor="textSecondary">
                       {count > 0 ? `${count}回実施 ${expanded ? '▾' : '▸'}` : '未実施'}
                     </ThemedText>
@@ -241,6 +256,9 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.three,
     padding: Spacing.three,
     gap: Spacing.three,
+  },
+  taskRowPaused: {
+    opacity: 0.5,
   },
   taskInfo: {
     flex: 1,

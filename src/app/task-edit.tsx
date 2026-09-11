@@ -9,7 +9,7 @@ import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { confirmAsync } from '@/lib/confirm';
 import { subscribeCoupleMemberUids } from '@/lib/couples';
 import { getCurrentPeriodKey } from '@/lib/period';
-import { createTask, deleteTask, getTask, updateTask } from '@/lib/tasks';
+import { createTask, deleteTask, getTask, setTaskPaused, updateTask } from '@/lib/tasks';
 import { useAuth } from '@/state/auth-context';
 import type { TaskFrequency } from '@/types/models';
 
@@ -28,6 +28,7 @@ export default function TaskEditScreen() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [isTaskDone, setIsTaskDone] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
 
   const coupleId = profile?.coupleId ?? null;
 
@@ -47,6 +48,7 @@ export default function TaskEditScreen() {
       if (task.assigneeUid === null) setAssignee('either');
       else setAssignee(task.assigneeUid === user.uid ? 'me' : 'partner');
       setIsTaskDone(getCurrentPeriodKey(task.frequency) in task.completions);
+      setIsPaused(task.isPaused);
       setLoading(false);
     });
   }, [id, coupleId, user]);
@@ -69,6 +71,19 @@ export default function TaskEditScreen() {
       router.back();
     } catch (e) {
       setError(e instanceof Error ? e.message : '保存に失敗しました');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleTogglePause() {
+    if (!coupleId || !id) return;
+    setSubmitting(true);
+    try {
+      await setTaskPaused(coupleId, id, !isPaused);
+      setIsPaused(!isPaused);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '更新に失敗しました');
     } finally {
       setSubmitting(false);
     }
@@ -165,6 +180,12 @@ export default function TaskEditScreen() {
         </Pressable>
 
         {id && (
+          <Pressable style={styles.pauseButton} onPress={handleTogglePause} disabled={submitting}>
+            <ThemedText type="smallBold">{isPaused ? '保留を解除する' : '保留にする'}</ThemedText>
+          </Pressable>
+        )}
+
+        {id && (
           <Pressable style={styles.deleteButton} onPress={handleDelete} disabled={submitting}>
             <ThemedText type="smallBold" style={styles.deleteButtonText}>
               このタスクを削除する
@@ -231,10 +252,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: Spacing.four,
   },
-  deleteButton: {
+  pauseButton: {
     alignItems: 'center',
     paddingVertical: Spacing.three,
     marginTop: Spacing.two,
+  },
+  deleteButton: {
+    alignItems: 'center',
+    paddingVertical: Spacing.three,
   },
   deleteButtonText: {
     color: '#d33',

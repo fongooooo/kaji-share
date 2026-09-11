@@ -35,6 +35,7 @@ function toTask(id: string, data: Record<string, unknown>): Task {
     assigneeUid: (data.assigneeUid as string | null) ?? null,
     frequency: data.frequency as TaskFrequency,
     completions,
+    isPaused: (data.isPaused as boolean | undefined) ?? false,
     updatedAt: (data.updatedAt as Timestamp | undefined)?.toMillis() ?? 0,
   };
 }
@@ -61,6 +62,7 @@ export async function createTask(
     assigneeUid: input.assigneeUid,
     frequency: input.frequency,
     completions: {},
+    isPaused: false,
     updatedAt: serverTimestamp(),
   });
 }
@@ -80,6 +82,13 @@ export async function updateTask(
 
 export async function deleteTask(coupleId: string, taskId: string) {
   await deleteDoc(doc(db, 'couples', coupleId, 'tasks', taskId));
+}
+
+export async function setTaskPaused(coupleId: string, taskId: string, isPaused: boolean) {
+  await updateDoc(doc(db, 'couples', coupleId, 'tasks', taskId), {
+    isPaused,
+    updatedAt: serverTimestamp(),
+  });
 }
 
 export async function setTaskPeriodCompletion(

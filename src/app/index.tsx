@@ -48,7 +48,10 @@ export default function TaskListScreen() {
   const visibleTasks = tasks
     .filter((task) => frequencyTab === 'all' || task.frequency === frequencyTab)
     .filter((task) => !onlyMine || task.assigneeUid === user?.uid)
-    .sort((a, b) => (isDone(a) === isDone(b) ? 0 : isDone(a) ? 1 : -1));
+    .sort((a, b) => {
+      if (a.isPaused !== b.isPaused) return a.isPaused ? 1 : -1;
+      return isDone(a) === isDone(b) ? 0 : isDone(a) ? 1 : -1;
+    });
 
   function assigneeLabel(task: Task) {
     if (task.assigneeUid === null) return 'どちらでも';
@@ -60,7 +63,7 @@ export default function TaskListScreen() {
   }
 
   async function handleToggle(task: Task) {
-    if (!coupleId || !user) return;
+    if (!coupleId || !user || task.isPaused) return;
     await setTaskPeriodCompletion(coupleId, task.id, getCurrentPeriodKey(task.frequency), user.uid, !isDone(task));
   }
 
@@ -128,14 +131,17 @@ export default function TaskListScreen() {
             </ThemedText>
           }
           renderItem={({ item }) => (
-            <ThemedView type="backgroundElement" style={styles.taskRow}>
-              <Pressable style={styles.checkbox} onPress={() => handleToggle(item)}>
-                <ThemedText>{isDone(item) ? '✅' : '⬜️'}</ThemedText>
+            <ThemedView
+              type="backgroundElement"
+              style={[styles.taskRow, item.isPaused && styles.taskRowPaused]}>
+              <Pressable style={styles.checkbox} onPress={() => handleToggle(item)} disabled={item.isPaused}>
+                <ThemedText>{!item.isPaused && isDone(item) ? '✅' : '⬜️'}</ThemedText>
               </Pressable>
               <Link href={{ pathname: '/task-edit', params: { id: item.id } }} asChild>
                 <Pressable style={styles.taskInfo}>
                   <ThemedText type="default" style={isDone(item) ? styles.taskDone : undefined}>
                     {item.title}
+                    {item.isPaused ? '（保留中）' : ''}
                   </ThemedText>
                   <ThemedText type="small" themeColor="textSecondary">
                     担当: {assigneeLabel(item)}
@@ -231,6 +237,9 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.three,
     padding: Spacing.three,
     gap: Spacing.three,
+  },
+  taskRowPaused: {
+    opacity: 0.5,
   },
   checkbox: {
     padding: Spacing.one,
