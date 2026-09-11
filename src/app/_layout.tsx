@@ -22,6 +22,7 @@ export default function RootLayout() {
           <Stack.Screen name="login" />
           <Stack.Screen name="pair" />
           <Stack.Screen name="task-edit" options={{ presentation: 'modal', headerShown: true, title: 'タスク' }} />
+          <Stack.Screen name="history" options={{ headerShown: true, title: '履歴' }} />
         </Stack>
       </AuthProvider>
     </ThemeProvider>

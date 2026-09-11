@@ -81,9 +81,14 @@ export default function TaskListScreen() {
           <ThemedText type="title" style={styles.title}>
             家事タスク
           </ThemedText>
-          <Pressable onPress={() => router.push('/task-edit')}>
-            <ThemedText type="linkPrimary">＋ 追加</ThemedText>
-          </Pressable>
+          <ThemedView style={styles.headerActions}>
+            <Pressable onPress={() => router.push('/history')}>
+              <ThemedText type="linkPrimary">履歴</ThemedText>
+            </Pressable>
+            <Pressable onPress={() => router.push('/task-edit')}>
+              <ThemedText type="linkPrimary">＋ 追加</ThemedText>
+            </Pressable>
+          </ThemedView>
         </ThemedView>
 
         <ThemedView style={styles.tabs}>
@@ -181,6 +186,10 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: Spacing.three,
   },
   tabs: {
     flexDirection: 'row',

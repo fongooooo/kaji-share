@@ -36,6 +36,12 @@ export function formatCompletedDate(ms: number): string {
   return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
+export function getMonthRange(date: Date): { start: number; end: number } {
+  const start = new Date(date.getFullYear(), date.getMonth(), 1).getTime();
+  const end = new Date(date.getFullYear(), date.getMonth() + 1, 1).getTime();
+  return { start, end };
+}
+
 export function getCurrentPeriodLabel(frequency: TaskFrequency, now: Date = new Date()): string {
   if (frequency === 'monthly') {
     return `${now.getFullYear()}年${now.getMonth() + 1}月`;
