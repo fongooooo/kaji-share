@@ -13,6 +13,7 @@ export type Task = {
   // キー: 週次なら"2026-W37"、月次なら"2026-09"のような期間キー
   completions: Record<string, TaskCompletion>;
   isPaused: boolean;
+  createdAt: number;
   updatedAt: number;
 };
 

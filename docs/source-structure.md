@@ -46,7 +46,7 @@ src/
 | `login.tsx` | ログイン・新規登録画面。`signIn` / `signUp` を切り替えて Firebase Auth に送信する |
 | `pair.tsx` | ペア設定画面。招待コードの発行（`createCouple`）または入力（`joinCoupleByInviteCode`）でパートナーと紐付ける |
 | `task-edit.tsx` | タスク登録・編集画面（モーダル表示）。URL パラメータ `id` の有無で新規/編集を切り替える。保留の切り替え・削除もここから行う |
-| `history.tsx` | 履歴画面。「実施状況」タブ（各タスクの最終実施日、未実施は明記）と「月別」タブ（月を選んで実施状況を確認。週次タスクはタップで実施日一覧を展開）を切り替える |
+| `history.tsx` | 履歴画面。「実施状況」タブ（各タスクの最終実施日、未実施は明記）と「月別」タブ（タスク×直近1年の月の行列。タスク名列は固定し月列を横スクロール、セルをタップすると実施日一覧をモーダル表示）を切り替える |
 
 ### components/ — 共通UIコンポーネント
 
@@ -76,7 +76,7 @@ src/
 | `firebase.ts` | Firebase アプリを初期化し、`auth`・`db` インスタンスをエクスポートする。ネイティブは `AsyncStorage` でセッション永続化、Web はブラウザの `localStorage` を使う |
 | `couples.ts` | `createCouple`（ペア作成・招待コード発行）、`joinCoupleByInviteCode`（招待コードでペア参加）、`subscribeCoupleMemberUids`（メンバーUID のリアルタイム購読）を提供する |
 | `tasks.ts` | `subscribeTasks`（タスク一覧のリアルタイム購読）、`getTask`（単件取得）、`createTask`・`updateTask`・`deleteTask`（登録/更新/削除）、`setTaskPeriodCompletion`（現在の期間の完了/未完了を切り替え）、`setTaskPaused`（保留のオン/オフ）を提供する |
-| `period.ts` | `getCurrentPeriodKey`（週次はISO週番号、月次は年月のキーを算出）、`getCurrentPeriodLabel`（表示用ラベル）、`getMonthRange`（月の開始/終了タイムスタンプ）、`formatCompletedDate`（完了日の表示フォーマット）を提供する |
+| `period.ts` | `getCurrentPeriodKey`（週次はISO週番号、月次は年月のキーを算出）、`getCurrentPeriodLabel`（表示用ラベル）、`getMonthRange`（月の開始/終了タイムスタンプ）、`getRecentMonths`（直近N ヶ月分の月初日付を古い順で取得）、`formatCompletedDate`（完了日の表示フォーマット）、`formatMonthColumnLabel`（履歴マトリクスの月列見出し用フォーマット）を提供する |
 | `confirm.ts` | `confirmAsync`。react-native-web が `Alert.alert` の複数ボタン確認に対応していないため、Web は `window.confirm`、ネイティブは `Alert.alert` を使い分ける |
 
 ### state/ — グローバル状態管理
@@ -89,7 +89,7 @@ src/
 
 | ファイル | 役割 |
 |---|---|
-| `models.ts` | Firestore ドキュメントに対応する型（`Task`・`TaskCompletion`・`UserProfile`）と列挙型（`TaskFrequency`）を定義する。タスクの完了状態は `Task.completions`（期間キーごとの完了記録）で持ち、固定の状態列挙型は無い |
+| `models.ts` | Firestore ドキュメントに対応する型（`Task`・`TaskCompletion`・`UserProfile`）と列挙型（`TaskFrequency`）を定義する。タスクの完了状態は `Task.completions`（期間キーごとの完了記録）で持ち、固定の状態列挙型は無い。`Task.createdAt` は履歴の月別マトリクスで登録前の月を判別するために使う |
 
 ---
 

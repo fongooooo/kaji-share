@@ -42,6 +42,20 @@ export function getMonthRange(date: Date): { start: number; end: number } {
   return { start, end };
 }
 
+// 直近count分の月を、古い→新しい順で返す(最後の要素が`from`の月になる)
+export function getRecentMonths(count: number, from: Date = new Date()): Date[] {
+  const months: Date[] = [];
+  for (let i = count - 1; i >= 0; i--) {
+    months.push(new Date(from.getFullYear(), from.getMonth() - i, 1));
+  }
+  return months;
+}
+
+// 年をまたぐ範囲を一覧表示するため、年が変わっても分かるように"YY/M"形式で表示する
+export function formatMonthColumnLabel(date: Date): string {
+  return `${String(date.getFullYear()).slice(-2)}/${date.getMonth() + 1}`;
+}
+
 export function getCurrentPeriodLabel(frequency: TaskFrequency, now: Date = new Date()): string {
   if (frequency === 'monthly') {
     return `${now.getFullYear()}年${now.getMonth() + 1}月`;

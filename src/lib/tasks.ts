@@ -36,6 +36,8 @@ function toTask(id: string, data: Record<string, unknown>): Task {
     frequency: data.frequency as TaskFrequency,
     completions,
     isPaused: (data.isPaused as boolean | undefined) ?? false,
+    // 旧データにはcreatedAtが無い場合がある。登録日が分からないため0(=常に登録済み扱い)として扱う
+    createdAt: (data.createdAt as Timestamp | undefined)?.toMillis() ?? 0,
     updatedAt: (data.updatedAt as Timestamp | undefined)?.toMillis() ?? 0,
   };
 }
@@ -63,6 +65,7 @@ export async function createTask(
     frequency: input.frequency,
     completions: {},
     isPaused: false,
+    createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
 }
